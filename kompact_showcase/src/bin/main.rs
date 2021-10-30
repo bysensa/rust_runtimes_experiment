@@ -1,39 +1,26 @@
-pub mod dog_fact;
-pub mod server;
 
-use std::future::Future;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::spawn;
+
 use kompact::prelude::*;
-use kompact::executors;
-use kompact::executors::{CanExecute, Executor, FuturesExecutor, JoinHandle};
-use tokio::task::spawn_blocking;
-use client::DogFact;
-use tide_server::TideServer;
-use dog_fact::{DogFactComponent, DogFactRequest, DogFactResponse};
-use server::ServerComponent;
+use kompact_showcase::dog_fact::dog_fact::{DogFactComponent, DogFactRequest};
+use kompact_showcase::tide_server::tide_server::TideServerComponent;
+use kompact_showcase::warp_server::warp_server::WarpServerComponent;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
-    tokio::spawn(async move {
-        let tide_server = TideServer::new();
-        dbg!(&tide_server);
-        tide_server.listen("127.0.0.1:8080").await
-    });
-
+fn main() {
 
     let mut config = KompactConfig::default();
     let system = config.build().expect("system");
+
     let dog_fact = system.create(DogFactComponent::new);
-    let dog_fact_ref = dog_fact.actor_ref().hold().expect("live");
-    let server = system.create(ServerComponent::new);
+    let tide_server = system.create(TideServerComponent::new);
+    let warp_server = system.create(WarpServerComponent::new);
 
 
-    system.start(&server);
+    system.start(&tide_server);
+    system.start(&warp_server);
     system.start(&dog_fact);
 
+
+    let dog_fact_ref = dog_fact.actor_ref().hold().expect("live");
     let answer = dog_fact_ref.ask(Ask::of(DogFactRequest));
     let handle = system.spawn(async move {
         let result = answer.await.unwrap();
@@ -41,5 +28,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     system.await_termination();
-    Ok(())
 }
