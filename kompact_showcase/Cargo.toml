@@ -1,0 +1,14 @@
+[package]
+name = "kompact_showcase"
+version = "0.1.0"
+edition = "2021"
+default-run = "main"
+
+[dependencies]
+kompact  = { version = "0.10.1", features = ["thread_pinning","serde_support","silent_logging", "ser_id_64",  "implicit_routes"]  }
+tokio = { version = "1.13.0", features = ["full"] }
+tide = { path = "../tide"}
+client = { path = "../client"}
+async-task = "4.0.3"
+num_cpus = "1.13.0"
+
