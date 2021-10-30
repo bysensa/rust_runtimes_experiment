@@ -1,4 +1,5 @@
 pub mod dog_fact;
+pub mod server;
 
 use std::future::Future;
 use std::sync::Arc;
@@ -9,8 +10,10 @@ use kompact::executors;
 use kompact::executors::{CanExecute, Executor, FuturesExecutor, JoinHandle};
 use tokio::task::spawn_blocking;
 use client::DogFact;
-use tide::TideServer;
+use tide_server::TideServer;
 use dog_fact::{DogFactComponent, DogFactRequest, DogFactResponse};
+use server::ServerComponent;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -23,9 +26,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut config = KompactConfig::default();
     let system = config.build().expect("system");
-
     let dog_fact = system.create(DogFactComponent::new);
     let dog_fact_ref = dog_fact.actor_ref().hold().expect("live");
+    let server = system.create(ServerComponent::new);
+
+
+    system.start(&server);
     system.start(&dog_fact);
 
     let answer = dog_fact_ref.ask(Ask::of(DogFactRequest));

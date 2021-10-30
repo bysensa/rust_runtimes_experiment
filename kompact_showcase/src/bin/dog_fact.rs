@@ -38,7 +38,7 @@ impl Actor for DogFactComponent {
             debug!(safe_async_self.log(), "Time to perform logic: {}", elapsed.as_millis());
             dbg!(&res);
             msg.reply(DogFactResponse(res)).expect("reply");
-            safe_async_self.ctx.system().shutdown_async();
+            // safe_async_self.ctx.system().shutdown_async();
             Handled::Ok
         });
 

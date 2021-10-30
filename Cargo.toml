@@ -2,6 +2,7 @@
 
 members = [
   "kompact_showcase",
-  "tide",
   "client",
+  "tide_server",
+  "warp_server",
 ]

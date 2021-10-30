@@ -7,7 +7,7 @@ default-run = "main"
 [dependencies]
 kompact  = { version = "0.10.1"}
 tokio = { version = "1.13.0", features = ["full"] }
-tide = { path = "../tide"}
+tide_server = { path = "../tide_server"}
 client = { path = "../client"}
 async-task = "4.0.3"
 num_cpus = "1.13.0"
