@@ -11,70 +11,6 @@ use tokio::task::spawn_blocking;
 use client::DogFact;
 use tide::TideServer;
 use dog_fact::{DogFactComponent, DogFactRequest, DogFactResponse};
-
-#[derive(Clone, Debug)]
-struct TokioExecutor {
-    active: Arc<AtomicBool>,
-}
-
-impl TokioExecutor {
-    fn new(cpus: usize) -> TokioExecutor {
-        TokioExecutor {active: Arc::new(AtomicBool::new(true)), }
-    }
-}
-
-impl Default for TokioExecutor {
-    fn default() -> Self {
-        TokioExecutor::new(num_cpus::get())
-    }
-}
-
-impl Executor for TokioExecutor {
-    fn shutdown_async(&self) {
-        if self.active.compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst).unwrap() {
-            println!("Shutting down executor.");
-        } else {
-            println!("Executor was already shut down!");
-        }
-    }
-
-    fn shutdown_borrowed(&self) -> Result<(), String> {
-        if self.active.compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst).unwrap() {
-            println!("Waiting for pool to shut down.");
-            ///self.pool.join();
-            println!("Pool was shut down.");
-            Result::Ok(())
-        } else {
-            Result::Err(String::from("Pool was already shut down!"))
-        }
-    }
-}
-
-impl CanExecute for TokioExecutor {
-    fn execute_job(&self, job: Box<dyn FnOnce() + Send + 'static>) {
-        if self.active.load(Ordering::SeqCst) {
-            tokio::spawn(async move{
-                tokio::task::spawn_blocking(job);
-            });
-        } else {
-            println!("Ignoring job as pool is shutting down.");
-        }
-    }
-}
-
-
-impl FuturesExecutor for TokioExecutor {
-    fn spawn<R: Send + 'static>(&self, future: impl Future<Output=R> + 'static + Send) -> JoinHandle<R> {
-        let (task, handle) = async_task::spawn(future, move |task| {
-            tokio::task::spawn_blocking(|| task.run());
-        });
-        task.schedule();
-        handle
-    }
-}
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -86,12 +22,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let mut config = KompactConfig::default();
-    // config.executor(TokioExecutor::new);
     let system = config.build().expect("system");
     let component = system.create(HelloWorldComponent::new);
     let dog_fact = system.create(DogFactComponent::new);
     let dog_fact_ref = dog_fact.actor_ref().hold().expect("live");
-    dog_fact_ref.ask(Ask::of(DogFactRequest));
+    let answer = dog_fact_ref.ask(Ask::of(DogFactRequest));
+    let handle = system.spawn(async move {
+        let result = answer.await.unwrap();
+        dbg!(result.0);
+    });
+
     system.start(&component);
     system.start(&dog_fact);
     system.await_termination();
