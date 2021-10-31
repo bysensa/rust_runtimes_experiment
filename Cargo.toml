@@ -2,4 +2,5 @@
 
 members = [
   "kompact_showcase",
+  "bastion_showcase",
 ]
