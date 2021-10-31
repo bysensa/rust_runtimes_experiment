@@ -11,6 +11,7 @@ pub mod tide_server {
     use tide::prelude::*;
     use tokio::runtime;
 
+    // компонент в котором запускается инстанс сервера tide
     #[derive(ComponentDefinition)]
     pub struct TideServerComponent {
         ctx: ComponentContext<Self>,
@@ -30,6 +31,7 @@ pub mod tide_server {
     impl Actor for TideServerComponent {
         type Message = Ask<TideReqData, TideResData>;
 
+        /// При получении запроса сразу отвечаем соответствующей структурой данных
         fn receive_local(&mut self, msg: Self::Message) -> Handled {
             dbg!(&msg.request());
 
@@ -42,10 +44,13 @@ pub mod tide_server {
         }
     }
 
-
+    // в процессе старта компонента запускаем в Tokio Runtime инстанс TideServer и начинаем слушать запросы
     impl ComponentLifecycle for TideServerComponent {
         fn on_start(&mut self) -> Handled where Self: 'static {
+            // получаем ссылку на себя (необщодимо для отправки сообщений
             let self_ref = self.actor_ref().hold().unwrap();
+            // запускаем в одном из потоков future с запущенной TokioRuntime в которой работает инстанс
+            // сервера Tide. handle на future кладем в стейт компонента
             self.handle = Some(self.ctx.system().spawn(async move {
                 let rt = runtime::Builder::new_multi_thread().enable_all().build().unwrap();
                 rt.block_on(async move {
@@ -60,16 +65,6 @@ pub mod tide_server {
         }
 
 
-    }
-
-
-    #[cfg(test)]
-    mod tests {
-        #[test]
-        fn it_works() {
-            let result = 2 + 2;
-            assert_eq!(result, 4);
-        }
     }
 
     #[derive(Debug)]
